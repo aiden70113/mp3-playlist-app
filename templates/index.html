@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MP3 병합기</title>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding-top: 100px;">
+    <h2>🎵 MP3 플레이리스트 병합기</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="mp3files" multiple accept=".mp3"><br><br>
+        <label>플레이리스트 이름:</label>
+        <input type="text" name="playlist_name" placeholder="merged_playlist"><br><br>
+        <label>정렬 방식:</label>
+        <select name="sort_option">
+            <option value="이름순">이름순</option>
+            <option value="업로드 순">업로드 순</option>
+        </select><br><br>
+        <button type="submit" style="padding: 10px 20px;">병합된 MP3 다운로드</button>
+    </form>
+</body>
+</html>
