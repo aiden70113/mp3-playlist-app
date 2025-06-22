@@ -1,51 +1,37 @@
-import streamlit as st
-import tempfile
+from flask import Flask, render_template, request, send_file
+from pydub import AudioSegment
 import os
+import tempfile
 
-st.set_page_config(page_title="MP3 Playlist Generator", layout="centered")
+app = Flask(__name__)
+UPLOAD_FOLDER = tempfile.gettempdir()
 
-st.title("🎵 MP3 플레이리스트 생성기 (웹 버전)")
-st.markdown("여러 MP3 파일을 업로드하면 `.m3u` 파일로 만들어줄게!")
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        files = request.files.getlist("mp3files")
+        playlist_name = request.form.get("playlist_name", "merged_playlist")
+        sort_order = request.form.get("sort_option", "이름순")
 
-uploaded_files = st.file_uploader("MP3 파일들을 업로드하세요 🎶", type="mp3", accept_multiple_files=True)
+        paths = []
+        for file in files:
+            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(filepath)
+            paths.append(filepath)
 
-playlist_name = st.text_input("📛 플레이리스트 이름 (확장자 제외)", "my_playlist")
+        if sort_order == "이름순":
+            paths.sort()
+        elif sort_order == "업로드 순":
+            pass  # 업로드 순 유지
 
-sort_option = st.selectbox("📑 정렬 방식 선택", ["이름순", "업로드 순"])
+        combined = AudioSegment.empty()
+        for path in paths:
+            audio = AudioSegment.from_mp3(path)
+            combined += audio
 
-if st.button("🎧 플레이리스트 생성"):
-    if not uploaded_files:
-        st.warning("MP3 파일을 업로드해주세요!")
-    elif not playlist_name:
-        st.warning("플레이리스트 이름을 입력해주세요!")
-    else:
-        # 임시 폴더 만들기
-        with tempfile.TemporaryDirectory() as temp_dir:
-            paths = []
-            for file in uploaded_files:
-                path = os.path.join(temp_dir, file.name)
-                with open(path, "wb") as f:
-                    f.write(file.read())
-                paths.append(path)
+        output_path = os.path.join("static", f"{playlist_name}.mp3")
+        combined.export(output_path, format="mp3")
 
-            # 정렬
-            if sort_option == "이름순":
-                paths.sort()
-            elif sort_option == "업로드 순":
-                pass  # 업로드 순 = 그대로 유지
+        return send_file(output_path, as_attachment=True)
 
-            # 플레이리스트 생성
-            m3u_path = os.path.join(temp_dir, f"{playlist_name}.m3u")
-            with open(m3u_path, "w", encoding="utf-8") as f:
-                f.write("#EXTM3U\n")
-                for path in paths:
-                    f.write(f"{os.path.basename(path)}\n")
-
-            # 다운로드 제공
-            with open(m3u_path, "rb") as f:
-                st.download_button(
-                    label="⬇️ 플레이리스트 다운로드",
-                    data=f,
-                    file_name=f"{playlist_name}.m3u",
-                    mime="text/plain"
-                )
+    return render_template("index.html")
